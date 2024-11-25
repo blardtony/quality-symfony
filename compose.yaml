@@ -1,0 +1,46 @@
+
+services:
+###> doctrine/doctrine-bundle ###
+  quality-database:
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonar
+    volumes:
+      - quality_database_data:/var/lib/postgresql/data:rw
+      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
+      # - ./docker/db/data:/var/lib/postgresql/data:rw
+    networks:
+      - quality
+###< doctrine/doctrine-bundle ###
+  quality-sonarqube:
+      image: sonarqube:community
+      hostname: sonarqube
+      depends_on:
+        quality-database:
+          condition: service_healthy
+      volumes:
+        - quality_sonarqube_data:/opt/sonarqube/data
+        - quality_sonarqube_extensions:/opt/sonarqube/extensions
+        - quality_sonarqube_logs:/opt/sonarqube/logs
+      ports:
+        - "9001:9000"
+      networks:
+        - quality
+volumes:
+###> doctrine/doctrine-bundle ###
+  quality_database_data:
+###< doctrine/doctrine-bundle ###
+  quality_sonarqube_data:
+  quality_sonarqube_extensions:
+  quality_sonarqube_logs:
+
+networks:
+  quality:
+    driver: bridge
